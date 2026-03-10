@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -7,7 +6,19 @@ function ReportForm(){
 
 const days=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 
+/* ================= HEADER INFO ================= */
+
+const [info,setInfo]=useState({
+centerName:"",
+village:"",
+teacherName:"",
+month:"",
+year:""
+});
+
 const [startDay,setStartDay]=useState(0);
+
+/* ================= OPENING STOCK ================= */
 
 const [stock,setStock]=useState({
 rice:0,
@@ -19,6 +30,8 @@ murukulu:0
 });
 
 const [stockEntries,setStockEntries]=useState([]);
+
+/* ================= DAILY ROW STRUCTURE ================= */
 
 const createRow=()=>({
 women:"",
@@ -43,8 +56,7 @@ murukuluBalance:0
 
 const [rows,setRows]=useState(Array.from({length:31},createRow));
 
-
-/* ================= CALCULATION ================= */
+/* ================= CALCULATIONS ================= */
 
 const calculateBalance=(data)=>{
 
@@ -113,7 +125,6 @@ data[i].murukuluBalance=murukuluBal;
 
 };
 
-
 /* ================= INPUT HANDLER ================= */
 
 const handleInputChange=(i,field,value)=>{
@@ -125,24 +136,6 @@ calculateBalance(updated);
 setRows(updated);
 
 };
-
-
-/* ================= ENTER NAVIGATION ================= */
-
-const handleKeyDown=(e,row,field)=>{
-
-if(e.key==="Enter"){
-
-const next=document.querySelector(
-`input[data-row="${row+1}"][data-field="${field}"]`
-);
-
-if(next) next.focus();
-
-}
-
-};
-
 
 /* ================= STOCK RECEIVED ================= */
 
@@ -162,7 +155,6 @@ setRows(newRows);
 
 };
 
-
 /* ================= EFFECT ================= */
 
 useEffect(()=>{
@@ -170,7 +162,6 @@ const newRows=[...rows];
 calculateBalance(newRows);
 setRows(newRows);
 },[stock,startDay,stockEntries]);
-
 
 /* ================= TOTALS ================= */
 
@@ -203,7 +194,6 @@ murukuluChildren:0
 
 const last=rows[rows.length-1];
 
-
 /* ================= PDF EXPORT ================= */
 
 const exportPDF = () => {
@@ -215,22 +205,52 @@ pdf.text("Anganwadi Food Report",14,15);
 
 pdf.setFontSize(12);
 
-/* ---------------- STOCK SECTION ---------------- */
+/* HEADER INFO */
 
-pdf.text("Opening Stock",14,30);
+let y=25;
 
-pdf.text(`Rice: ${stock.rice}`,14,38);
-pdf.text(`Dal: ${stock.dal}`,60,38);
-pdf.text(`Oil: ${stock.oil}`,100,38);
+if(info.centerName){
+pdf.text(`Center Name: ${info.centerName}`,14,y);
+y+=6;
+}
 
-pdf.text(`Eggs: ${stock.eggs}`,14,46);
-pdf.text(`Milk: ${stock.milk}`,60,46);
-pdf.text(`Murukulu: ${stock.murukulu}`,100,46);
+if(info.village){
+pdf.text(`Village: ${info.village}`,14,y);
+y+=6;
+}
 
+if(info.teacherName){
+pdf.text(`Teacher Name: ${info.teacherName}`,14,y);
+y+=6;
+}
 
-/* ---------------- STOCK RECEIVED ---------------- */
+if(info.month){
+pdf.text(`Month: ${info.month}`,14,y);
+y+=6;
+}
 
-let startY = 60;
+if(info.year){
+pdf.text(`Year: ${info.year}`,14,y);
+y+=6;
+}
+
+/* OPENING STOCK */
+
+let stockY=y+5;
+
+pdf.text("Opening Stock",14,stockY);
+
+pdf.text(`Rice: ${stock.rice}`,14,stockY+8);
+pdf.text(`Dal: ${stock.dal}`,60,stockY+8);
+pdf.text(`Oil: ${stock.oil}`,100,stockY+8);
+
+pdf.text(`Eggs: ${stock.eggs}`,14,stockY+16);
+pdf.text(`Milk: ${stock.milk}`,60,stockY+16);
+pdf.text(`Murukulu: ${stock.murukulu}`,100,stockY+16);
+
+/* STOCK RECEIVED */
+
+let startY = stockY + 30;
 
 if(stockEntries.length>0){
 
@@ -252,14 +272,9 @@ theme:"grid"
 
 startY = pdf.lastAutoTable.finalY + 10;
 
-}else{
-
-startY = 60;
-
 }
 
-
-/* ---------------- DAILY TABLE ---------------- */
+/* DAILY TABLE */
 
 const tableData = rows.map((row,i)=>{
 
@@ -278,7 +293,6 @@ row.murukuluChildren,row.murukuluBalance
 
 });
 
-
 tableData.push([
 "Total",
 totals.women,totals.children,
@@ -289,7 +303,6 @@ totals.eggsWomen,totals.eggsChildren,last.eggsBalance,
 totals.milkWomen,last.milkBalance,
 totals.murukuluChildren,last.murukuluBalance
 ]);
-
 
 autoTable(pdf,{
 startY:startY,
@@ -307,11 +320,9 @@ styles:{fontSize:8},
 theme:"grid"
 });
 
-
 pdf.save("Anganwadi_Report.pdf");
 
 };
-
 
 /* ================= UI ================= */
 
@@ -330,6 +341,62 @@ Export PDF
 Anganwadi Food Report
 </h1>
 
+{/* HEADER INPUTS */}
+
+<div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+
+<input
+className="border p-2"
+placeholder="Center Name"
+value={info.centerName}
+onChange={(e)=>setInfo({...info,centerName:e.target.value})}
+/>
+
+<input
+className="border p-2"
+placeholder="Village"
+value={info.village}
+onChange={(e)=>setInfo({...info,village:e.target.value})}
+/>
+
+<input
+className="border p-2"
+placeholder="Teacher Name (Optional)"
+value={info.teacherName}
+onChange={(e)=>setInfo({...info,teacherName:e.target.value})}
+/>
+
+<select
+className="border p-2"
+value={info.month}
+onChange={(e)=>setInfo({...info,month:e.target.value})}
+>
+<option value="">Select Month</option>
+<option>January</option>
+<option>February</option>
+<option>March</option>
+<option>April</option>
+<option>May</option>
+<option>June</option>
+<option>July</option>
+<option>August</option>
+<option>September</option>
+<option>October</option>
+<option>November</option>
+<option>December</option>
+</select>
+
+<input
+className="border p-2"
+placeholder="Year"
+value={info.year}
+onChange={(e)=>setInfo({...info,year:e.target.value})}
+/>
+
+</div>
+
+{/* START DAY */}
+
 <select
 className="border p-2 mb-4"
 onChange={e=>setStartDay(Number(e.target.value))}
@@ -343,24 +410,26 @@ onChange={e=>setStartDay(Number(e.target.value))}
 <option value={6}>Saturday</option>
 </select>
 
-
 {/* OPENING STOCK */}
 
 <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
 
 {Object.keys(stock).map(item=>(
+
 <div key={item}>
 <label className="font-semibold capitalize">{item} Stock</label>
+
 <input
 className="border p-2 w-full"
 value={stock[item]}
 onChange={e=>setStock({...stock,[item]:Number(e.target.value)})}
 />
+
 </div>
+
 ))}
 
 </div>
-
 
 {/* STOCK RECEIVED */}
 
@@ -412,7 +481,6 @@ onChange={e=>updateStockEntry(i,"quantity",e.target.value)}
 
 </div>
 
-
 {/* TABLE */}
 
 <div className="overflow-x-auto">
@@ -462,10 +530,7 @@ return(
 <td className="border p-1">
 <input
 type="number"
-data-row={i}
-data-field="women"
 value={row.women}
-onKeyDown={(e)=>handleKeyDown(e,i,"women")}
 onChange={(e)=>handleInputChange(i,"women",e.target.value)}
 className="w-16 text-center"
 />
@@ -474,10 +539,7 @@ className="w-16 text-center"
 <td className="border p-1">
 <input
 type="number"
-data-row={i}
-data-field="children"
 value={row.children}
-onKeyDown={(e)=>handleKeyDown(e,i,"children")}
 onChange={(e)=>handleInputChange(i,"children",e.target.value)}
 className="w-16 text-center"
 />
@@ -510,7 +572,6 @@ className="w-16 text-center"
 );
 
 })}
-
 
 <tr className="bg-gray-200 font-bold">
 
