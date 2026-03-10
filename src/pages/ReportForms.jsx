@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 
-function ReportForm() {
+function ReportForm(){
 
 const reportRef = useRef();
 
@@ -50,27 +50,27 @@ const [rows,setRows]=useState(Array.from({length:31},createRow));
 
 const days=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 
-/* PDF EXPORT */
 
-const exportPDF = async () => {
+/* PDF EXPORT FIXED */
+
+const exportPDF = async ()=>{
 
 const element = reportRef.current;
 
-/* force desktop width even if mobile */
 const originalWidth = element.style.width;
-element.style.width = "1400px";
+element.style.width="1400px";
 
 const canvas = await html2canvas(element,{
-scale:2,
-windowWidth:1400,
-scrollY:-window.scrollY
+scale:3,
+useCORS:true,
+windowWidth:1400
 });
 
-element.style.width = originalWidth;
+element.style.width=originalWidth;
 
 const imgData = canvas.toDataURL("image/png");
 
-const pdf = new jsPDF("l","mm","a4"); // landscape
+const pdf = new jsPDF("l","mm","a4");
 
 const imgWidth = 297;
 const pageHeight = 210;
@@ -99,7 +99,7 @@ pdf.save("Anganwadi_Report.pdf");
 
 };
 
-/* BALANCE CALCULATION */
+
 
 const calculateBalance=(data)=>{
 
@@ -126,35 +126,35 @@ if(e.item==="milk") milkBal+=Number(e.quantity);
 if(e.item==="murukulu") murukuluBal+=Number(e.quantity);
 });
 
-/* RICE */
+/* rice */
 
 data[i].riceWomen=women*150;
 data[i].riceChildren=children*75;
 riceBal-=data[i].riceWomen+data[i].riceChildren;
 data[i].riceBalance=riceBal;
 
-/* DAL */
+/* dal */
 
 data[i].dalWomen=women*30;
 data[i].dalChildren=children*15;
 dalBal-=data[i].dalWomen+data[i].dalChildren;
 data[i].dalBalance=dalBal;
 
-/* OIL */
+/* oil */
 
 data[i].oilWomen=women*16;
 data[i].oilChildren=children*5;
 oilBal-=data[i].oilWomen+data[i].oilChildren;
 data[i].oilBalance=oilBal;
 
-/* EGGS */
+/* eggs */
 
 data[i].eggsWomen=women;
 data[i].eggsChildren=children;
 eggBal-=women+children;
 data[i].eggsBalance=eggBal;
 
-/* MILK */
+/* milk */
 
 const weekday=(startDay+i)%7;
 let milkPerWoman=200;
@@ -167,7 +167,7 @@ data[i].milkWomen=women*milkPerWoman;
 milkBal-=data[i].milkWomen;
 data[i].milkBalance=milkBal;
 
-/* MURUKULU */
+/* murukulu */
 
 data[i].murukuluChildren=children*200;
 murukuluBal-=data[i].murukuluChildren;
@@ -183,11 +183,11 @@ const updated=[...rows];
 updated[index][field]=Number(value);
 
 calculateBalance(updated);
+
 setRows(updated);
 
 };
 
-/* ENTER KEY NAVIGATION */
 
 const handleKeyDown=(e,row,col)=>{
 
@@ -199,9 +199,7 @@ const next=document.querySelector(
 `input[data-row="${row+1}"][data-col="${col}"]`
 );
 
-if(next){
-next.focus();
-}
+if(next) next.focus();
 
 }
 
@@ -224,13 +222,16 @@ setRows(newRows);
 
 };
 
+
+// eslint-disable-next-line react-hooks/exhaustive-deps
 useEffect(()=>{
 const newRows=[...rows];
 calculateBalance(newRows);
 setRows(newRows);
 },[stock,startDay,stockEntries]);
 
-/* TOTALS */
+
+/* totals */
 
 const totals=rows.reduce((acc,row)=>{
 
@@ -272,6 +273,7 @@ murukuluChildren:0
 
 const last=rows[rows.length-1]||{};
 
+
 return(
 
 <div className="p-6 max-w-7xl mx-auto">
@@ -289,123 +291,39 @@ Export PDF
 Anganwadi Food Report
 </h1>
 
-<select
-className="border p-2 mb-4"
-onChange={e=>setStartDay(Number(e.target.value))}
->
-<option value={0}>Month starts Sunday</option>
-<option value={1}>Monday</option>
-<option value={2}>Tuesday</option>
-<option value={3}>Wednesday</option>
-<option value={4}>Thursday</option>
-<option value={5}>Friday</option>
-<option value={6}>Saturday</option>
-</select>
-
-{/* OPENING STOCK */}
-
-<div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
-
-{Object.keys(stock).map(item=>(
-<div key={item} className="flex flex-col">
-
-<label className="font-semibold capitalize">
-{item} Stock
-</label>
-
-<input
-className="border p-2 rounded"
-value={stock[item]}
-onChange={e=>setStock({...stock,[item]:Number(e.target.value)})}
-/>
-
-</div>
-))}
-
-</div>
-
-{/* STOCK RECEIVED */}
-
-<div className="mb-6">
-
-<h2 className="font-semibold mb-2">Stock Received</h2>
-
-<button
-onClick={addStockEntry}
-className="bg-blue-500 text-white px-4 py-2 rounded mb-3"
->
-Add Entry
-</button>
-
-{stockEntries.map((entry,i)=>(
-
-<div key={i} className="flex gap-2 mb-2 flex-wrap">
-
-<input
-className="border p-2"
-placeholder="Day"
-onChange={e=>updateStockEntry(i,"day",e.target.value)}
-/>
-
-<select
-className="border p-2"
-onChange={e=>updateStockEntry(i,"item",e.target.value)}
->
-<option value="rice">Rice</option>
-<option value="dal">Dal</option>
-<option value="oil">Oil</option>
-<option value="eggs">Eggs</option>
-<option value="milk">Milk</option>
-<option value="murukulu">Murukulu</option>
-</select>
-
-<input
-className="border p-2"
-placeholder="Quantity"
-onChange={e=>updateStockEntry(i,"quantity",e.target.value)}
-/>
-
-</div>
-
-))}
-
-</div>
-
-{/* TABLE */}
-
 <div className="overflow-x-auto">
 
-<table className="min-w-full text-sm border">
+<table className="min-w-full border text-sm border-collapse">
 
 <thead className="bg-blue-500 text-white">
 
 <tr>
 
-<th>Day</th>
-<th>Women</th>
-<th>Children</th>
+<th className="p-2 border">Day</th>
+<th className="p-2 border">Women</th>
+<th className="p-2 border">Children</th>
 
-<th>Rice W</th>
-<th>Rice C</th>
-<th>Rice Bal</th>
+<th className="p-2 border">Rice W</th>
+<th className="p-2 border">Rice C</th>
+<th className="p-2 border">Rice Bal</th>
 
-<th>Dal W</th>
-<th>Dal C</th>
-<th>Dal Bal</th>
+<th className="p-2 border">Dal W</th>
+<th className="p-2 border">Dal C</th>
+<th className="p-2 border">Dal Bal</th>
 
-<th>Oil W</th>
-<th>Oil C</th>
-<th>Oil Bal</th>
+<th className="p-2 border">Oil W</th>
+<th className="p-2 border">Oil C</th>
+<th className="p-2 border">Oil Bal</th>
 
-<th>Egg W</th>
-<th>Egg C</th>
-<th>Egg Bal</th>
+<th className="p-2 border">Egg W</th>
+<th className="p-2 border">Egg C</th>
+<th className="p-2 border">Egg Bal</th>
 
-<th>Milk W</th>
-<th>Milk Bal</th>
+<th className="p-2 border">Milk W</th>
+<th className="p-2 border">Milk Bal</th>
 
-<th>Murukulu C</th>
-<th>Murukulu Bal</th>
+<th className="p-2 border">Murukulu C</th>
+<th className="p-2 border">Murukulu Bal</th>
 
 </tr>
 
@@ -419,53 +337,53 @@ const weekday=days[(startDay+i)%7];
 
 return(
 
-<tr key={i} className="border-b text-center">
+<tr key={i} className="text-center">
 
-<td>{i+1} ({weekday})</td>
+<td className="p-2 border">{i+1} ({weekday})</td>
 
-<td>
+<td className="p-2 border">
 <input
 type="number"
 data-row={i}
 data-col="women"
-className="border w-16"
+className="border w-16 text-center"
 onKeyDown={(e)=>handleKeyDown(e,i,"women")}
 onChange={e=>handleInputChange(i,"women",e.target.value)}
 />
 </td>
 
-<td>
+<td className="p-2 border">
 <input
 type="number"
 data-row={i}
 data-col="children"
-className="border w-16"
+className="border w-16 text-center"
 onKeyDown={(e)=>handleKeyDown(e,i,"children")}
 onChange={e=>handleInputChange(i,"children",e.target.value)}
 />
 </td>
 
-<td>{row.riceWomen}</td>
-<td>{row.riceChildren}</td>
-<td>{row.riceBalance}</td>
+<td className="p-2 border">{row.riceWomen}</td>
+<td className="p-2 border">{row.riceChildren}</td>
+<td className="p-2 border">{row.riceBalance}</td>
 
-<td>{row.dalWomen}</td>
-<td>{row.dalChildren}</td>
-<td>{row.dalBalance}</td>
+<td className="p-2 border">{row.dalWomen}</td>
+<td className="p-2 border">{row.dalChildren}</td>
+<td className="p-2 border">{row.dalBalance}</td>
 
-<td>{row.oilWomen}</td>
-<td>{row.oilChildren}</td>
-<td>{row.oilBalance}</td>
+<td className="p-2 border">{row.oilWomen}</td>
+<td className="p-2 border">{row.oilChildren}</td>
+<td className="p-2 border">{row.oilBalance}</td>
 
-<td>{row.eggsWomen}</td>
-<td>{row.eggsChildren}</td>
-<td>{row.eggsBalance}</td>
+<td className="p-2 border">{row.eggsWomen}</td>
+<td className="p-2 border">{row.eggsChildren}</td>
+<td className="p-2 border">{row.eggsBalance}</td>
 
-<td>{row.milkWomen}</td>
-<td>{row.milkBalance}</td>
+<td className="p-2 border">{row.milkWomen}</td>
+<td className="p-2 border">{row.milkBalance}</td>
 
-<td>{row.murukuluChildren}</td>
-<td>{row.murukuluBalance}</td>
+<td className="p-2 border">{row.murukuluChildren}</td>
+<td className="p-2 border">{row.murukuluBalance}</td>
 
 </tr>
 
@@ -475,32 +393,32 @@ onChange={e=>handleInputChange(i,"children",e.target.value)}
 
 <tr className="bg-gray-200 font-bold text-center">
 
-<td>Total</td>
+<td className="p-2 border">Total</td>
 
-<td>{totals.women}</td>
-<td>{totals.children}</td>
+<td className="p-2 border">{totals.women}</td>
+<td className="p-2 border">{totals.children}</td>
 
-<td>{totals.riceWomen}</td>
-<td>{totals.riceChildren}</td>
-<td>{last.riceBalance}</td>
+<td className="p-2 border">{totals.riceWomen}</td>
+<td className="p-2 border">{totals.riceChildren}</td>
+<td className="p-2 border">{last.riceBalance}</td>
 
-<td>{totals.dalWomen}</td>
-<td>{totals.dalChildren}</td>
-<td>{last.dalBalance}</td>
+<td className="p-2 border">{totals.dalWomen}</td>
+<td className="p-2 border">{totals.dalChildren}</td>
+<td className="p-2 border">{last.dalBalance}</td>
 
-<td>{totals.oilWomen}</td>
-<td>{totals.oilChildren}</td>
-<td>{last.oilBalance}</td>
+<td className="p-2 border">{totals.oilWomen}</td>
+<td className="p-2 border">{totals.oilChildren}</td>
+<td className="p-2 border">{last.oilBalance}</td>
 
-<td>{totals.eggsWomen}</td>
-<td>{totals.eggsChildren}</td>
-<td>{last.eggsBalance}</td>
+<td className="p-2 border">{totals.eggsWomen}</td>
+<td className="p-2 border">{totals.eggsChildren}</td>
+<td className="p-2 border">{last.eggsBalance}</td>
 
-<td>{totals.milkWomen}</td>
-<td>{last.milkBalance}</td>
+<td className="p-2 border">{totals.milkWomen}</td>
+<td className="p-2 border">{last.milkBalance}</td>
 
-<td>{totals.murukuluChildren}</td>
-<td>{last.murukuluBalance}</td>
+<td className="p-2 border">{totals.murukuluChildren}</td>
+<td className="p-2 border">{last.murukuluBalance}</td>
 
 </tr>
 
