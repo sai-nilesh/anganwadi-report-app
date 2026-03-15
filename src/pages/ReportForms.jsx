@@ -30,6 +30,7 @@ murukulu:0
 });
 
 const [stockEntries,setStockEntries]=useState([]);
+const [childEggEntries,setChildEggEntries]=useState([]);
 
 /* ================= DAILY ROW STRUCTURE ================= */
 
@@ -72,6 +73,10 @@ for(let i=0;i<data.length;i++){
 const women=Number(data[i].women||0);
 const children=Number(data[i].children||0);
 
+const weekday=(startDay+i)%7;
+
+/* STOCK RECEIVED */
+
 const received=stockEntries.filter(e=>Number(e.day)===i+1);
 
 received.forEach(e=>{
@@ -102,14 +107,36 @@ oilBal-=data[i].oilWomen+data[i].oilChildren;
 data[i].oilBalance=oilBal;
 
 /* EGGS */
-data[i].eggsWomen=women;
-data[i].eggsChildren=children;
-eggBal-=women+children;
+
+/* subtract 3-6 year eggs */
+
+const childEggGiven=childEggEntries
+.filter(e=>Number(e.day)===i+1)
+.reduce((sum,e)=>sum+Number(e.quantity||0),0);
+
+eggBal-=childEggGiven;
+
+/* Wednesday double eggs */
+
+let eggWomen=women;
+let eggChildren=children;
+
+if(weekday===3){
+eggWomen=women*2;
+eggChildren=children*2;
+}
+
+data[i].eggsWomen=eggWomen;
+data[i].eggsChildren=eggChildren;
+
+eggBal-=eggWomen+eggChildren;
+
 data[i].eggsBalance=eggBal;
 
 /* MILK */
+
 let milkPerWoman=200;
-const weekday=(startDay+i)%7;
+
 if(weekday===4||weekday===6) milkPerWoman=300;
 
 data[i].milkWomen=women*milkPerWoman;
@@ -117,7 +144,8 @@ milkBal-=data[i].milkWomen;
 data[i].milkBalance=milkBal;
 
 /* MURUKULU */
-data[i].murukuluChildren=children*200;
+
+data[i].murukuluChildren=children*20;
 murukuluBal-=data[i].murukuluChildren;
 data[i].murukuluBalance=murukuluBal;
 
@@ -161,7 +189,7 @@ useEffect(()=>{
 const newRows=[...rows];
 calculateBalance(newRows);
 setRows(newRows);
-},[stock,startDay,stockEntries]);
+},[stock,startDay,stockEntries,childEggEntries]);
 
 /* ================= TOTALS ================= */
 
@@ -196,45 +224,22 @@ const last=rows[rows.length-1];
 
 /* ================= PDF EXPORT ================= */
 
-const exportPDF = () => {
+const exportPDF=()=>{
 
-const pdf = new jsPDF("l","mm","a4");
+const pdf=new jsPDF("l","mm","a4");
 
 pdf.setFontSize(18);
 pdf.text("Anganwadi Food Report",14,15);
 
 pdf.setFontSize(12);
 
-/* HEADER INFO */
-
 let y=25;
 
-if(info.centerName){
-pdf.text(`Center Name: ${info.centerName}`,14,y);
-y+=6;
-}
-
-if(info.village){
-pdf.text(`Village: ${info.village}`,14,y);
-y+=6;
-}
-
-if(info.teacherName){
-pdf.text(`Teacher Name: ${info.teacherName}`,14,y);
-y+=6;
-}
-
-if(info.month){
-pdf.text(`Month: ${info.month}`,14,y);
-y+=6;
-}
-
-if(info.year){
-pdf.text(`Year: ${info.year}`,14,y);
-y+=6;
-}
-
-/* OPENING STOCK */
+if(info.centerName){pdf.text(`Center Name: ${info.centerName}`,14,y);y+=6;}
+if(info.village){pdf.text(`Village: ${info.village}`,14,y);y+=6;}
+if(info.teacherName){pdf.text(`Teacher Name: ${info.teacherName}`,14,y);y+=6;}
+if(info.month){pdf.text(`Month: ${info.month}`,14,y);y+=6;}
+if(info.year){pdf.text(`Year: ${info.year}`,14,y);y+=6;}
 
 let stockY=y+5;
 
@@ -248,15 +253,13 @@ pdf.text(`Eggs: ${stock.eggs}`,14,stockY+16);
 pdf.text(`Milk: ${stock.milk}`,60,stockY+16);
 pdf.text(`Murukulu: ${stock.murukulu}`,100,stockY+16);
 
-/* STOCK RECEIVED */
-
-let startY = stockY + 30;
+let startY=stockY+30;
 
 if(stockEntries.length>0){
 
 pdf.text("Stock Received",14,startY);
 
-const stockTable = stockEntries.map(entry => [
+const stockTable=stockEntries.map(entry=>[
 entry.day,
 entry.item,
 entry.quantity
@@ -270,15 +273,13 @@ styles:{fontSize:10},
 theme:"grid"
 });
 
-startY = pdf.lastAutoTable.finalY + 10;
+startY=pdf.lastAutoTable.finalY+10;
 
 }
 
-/* DAILY TABLE */
+const tableData=rows.map((row,i)=>{
 
-const tableData = rows.map((row,i)=>{
-
-const weekday = days[(startDay+i)%7];
+const weekday=days[(startDay+i)%7];
 
 return[
 `${i+1} (${weekday})`,
@@ -333,9 +334,10 @@ return(
 <button
 onClick={exportPDF}
 className="bg-green-600 text-white px-4 py-2 rounded mb-4"
+
 >
-Export PDF
-</button>
+
+Export PDF </button>
 
 <h1 className="text-2xl font-bold text-center mb-6">
 Anganwadi Food Report
@@ -345,32 +347,22 @@ Anganwadi Food Report
 
 <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
 
-<input
-className="border p-2"
-placeholder="Center Name"
+<input className="border p-2" placeholder="Center Name"
 value={info.centerName}
-onChange={(e)=>setInfo({...info,centerName:e.target.value})}
-/>
+onChange={(e)=>setInfo({...info,centerName:e.target.value})}/>
 
-<input
-className="border p-2"
-placeholder="Village"
+<input className="border p-2" placeholder="Village"
 value={info.village}
-onChange={(e)=>setInfo({...info,village:e.target.value})}
-/>
+onChange={(e)=>setInfo({...info,village:e.target.value})}/>
 
-<input
-className="border p-2"
-placeholder="Teacher Name (Optional)"
+<input className="border p-2" placeholder="Teacher Name"
 value={info.teacherName}
-onChange={(e)=>setInfo({...info,teacherName:e.target.value})}
-/>
+onChange={(e)=>setInfo({...info,teacherName:e.target.value})}/>
 
-<select
-className="border p-2"
+<select className="border p-2"
 value={info.month}
-onChange={(e)=>setInfo({...info,month:e.target.value})}
->
+onChange={(e)=>setInfo({...info,month:e.target.value})}>
+
 <option value="">Select Month</option>
 <option>January</option>
 <option>February</option>
@@ -386,21 +378,17 @@ onChange={(e)=>setInfo({...info,month:e.target.value})}
 <option>December</option>
 </select>
 
-<input
-className="border p-2"
-placeholder="Year"
+<input className="border p-2" placeholder="Year"
 value={info.year}
-onChange={(e)=>setInfo({...info,year:e.target.value})}
-/>
+onChange={(e)=>setInfo({...info,year:e.target.value})}/>
 
 </div>
 
 {/* START DAY */}
 
-<select
-className="border p-2 mb-4"
-onChange={e=>setStartDay(Number(e.target.value))}
->
+<select className="border p-2 mb-4"
+onChange={e=>setStartDay(Number(e.target.value))}>
+
 <option value={0}>Month starts Sunday</option>
 <option value={1}>Monday</option>
 <option value={2}>Tuesday</option>
@@ -419,11 +407,9 @@ onChange={e=>setStartDay(Number(e.target.value))}
 <div key={item}>
 <label className="font-semibold capitalize">{item} Stock</label>
 
-<input
-className="border p-2 w-full"
+<input className="border p-2 w-full"
 value={stock[item]}
-onChange={e=>setStock({...stock,[item]:Number(e.target.value)})}
-/>
+onChange={e=>setStock({...stock,[item]:Number(e.target.value)})}/>
 
 </div>
 
@@ -440,40 +426,35 @@ onChange={e=>setStock({...stock,[item]:Number(e.target.value)})}
 <button
 onClick={addStockEntry}
 className="bg-blue-500 text-white px-3 py-1 rounded mb-2"
+
 >
-Add Entry
-</button>
+
+Add Entry </button>
 
 {stockEntries.map((entry,i)=>(
 
 <div key={i} className="flex gap-2 mb-2">
 
-<input
-className="border p-1"
-placeholder="Day"
+<input className="border p-1" placeholder="Day"
 value={entry.day}
-onChange={e=>updateStockEntry(i,"day",e.target.value)}
-/>
+onChange={e=>updateStockEntry(i,"day",e.target.value)}/>
 
-<select
-className="border p-1"
+<select className="border p-1"
 value={entry.item}
-onChange={e=>updateStockEntry(i,"item",e.target.value)}
->
+onChange={e=>updateStockEntry(i,"item",e.target.value)}>
+
 <option value="rice">Rice</option>
 <option value="dal">Dal</option>
 <option value="oil">Oil</option>
 <option value="eggs">Eggs</option>
 <option value="milk">Milk</option>
 <option value="murukulu">Murukulu</option>
+
 </select>
 
-<input
-className="border p-1"
-placeholder="Quantity"
+<input className="border p-1" placeholder="Quantity"
 value={entry.quantity}
-onChange={e=>updateStockEntry(i,"quantity",e.target.value)}
-/>
+onChange={e=>updateStockEntry(i,"quantity",e.target.value)}/>
 
 </div>
 
@@ -481,7 +462,47 @@ onChange={e=>updateStockEntry(i,"quantity",e.target.value)}
 
 </div>
 
-{/* TABLE */}
+{/* 3-6 YEAR CHILD EGGS */}
+
+<div className="mb-6">
+
+<h2 className="font-semibold mb-2">3-6 Year Egg Distribution</h2>
+
+<button
+onClick={()=>setChildEggEntries([...childEggEntries,{day:"",quantity:""}])}
+className="bg-purple-500 text-white px-3 py-1 rounded mb-2"
+
+>
+
+Add Entry </button>
+
+{childEggEntries.map((entry,i)=>(
+
+<div key={i} className="flex gap-2 mb-2">
+
+<input className="border p-1" placeholder="Day"
+value={entry.day}
+onChange={e=>{
+const updated=[...childEggEntries];
+updated[i].day=e.target.value;
+setChildEggEntries(updated);
+}}/>
+
+<input className="border p-1" placeholder="Egg Quantity"
+value={entry.quantity}
+onChange={e=>{
+const updated=[...childEggEntries];
+updated[i].quantity=e.target.value;
+setChildEggEntries(updated);
+}}/>
+
+</div>
+
+))}
+
+</div>
+ 
+ {/* TABLE */}
 
 <div className="overflow-x-auto">
 
@@ -608,7 +629,6 @@ className="w-16 text-center"
 </table>
 
 </div>
-
 </div>
 
 );
