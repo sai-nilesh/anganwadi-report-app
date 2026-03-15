@@ -466,7 +466,7 @@ onChange={e=>updateStockEntry(i,"quantity",e.target.value)}/>
 
 <div className="mb-6">
 
-<h2 className="font-semibold mb-2">3-6 Year Egg Distribution</h2>
+<h2 className="font-semibold mb-2">6-3(THR) Year Egg Distribution</h2>
 
 <button
 onClick={()=>setChildEggEntries([...childEggEntries,{day:"",quantity:""}])}
